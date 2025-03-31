@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<ruleset name="Custom Metrics Rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Custom ruleset for checking code metrics:
+        - Lines of Code (LoC)
+        - Cyclomatic Complexity (CC)
+        - Weighted Methods per Class (WMC)
+        - Coupling Between Objects (CBO)
+        - Lack of Cohesion in Methods (LCOM)
+    </description>
+
+    <!-- 1. Lines of Code (LoC) -->
+    <rule ref="category/java/design.xml/ExcessiveClassLength">
+    </rule>
+
+    <rule ref="category/java/design.xml/ExcessiveMethodLength">
+    </rule>
+
+    <!-- 2. Cyclomatic Complexity (CC) -->
+    <rule ref="category/java/design.xml/CyclomaticComplexity">
+    </rule>
+
+    <!-- 3. Weighted Methods per Class (WMC) -->
+    <rule ref="category/java/design.xml/TooManyMethods">
+    </rule>
+
+    <!-- 4. Coupling Between Objects (CBO) -->
+    <rule ref="category/java/design.xml/CouplingBetweenObjects">
+    </rule>
+
+    <!-- 5. Lack of Cohesion in Methods (LCOM) -->
+    <rule ref="category/java/design.xml/GodClass">
+    </rule>
+</ruleset>
