@@ -91,6 +91,11 @@
           <artifactId>maven-site-plugin</artifactId>
           <version>3.12.1</version>
           <configuration>
+              <modules>
+                <module>doc-core</module>
+                <module>doc-web</module>
+                <module>doc-web-common</module>
+              </modules>
               <reportPlugins>
                   <plugin>
                       <groupId>org.apache.maven.plugins</groupId>
