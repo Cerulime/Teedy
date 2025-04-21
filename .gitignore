@@ -21,3 +21,5 @@ target
 #macos
 .DS_Store
 data/docs/log/docs.log
+
+/tmp
