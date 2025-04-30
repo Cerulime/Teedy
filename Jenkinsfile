@@ -11,19 +11,26 @@ pipeline {
                 sh 'mvn compile'
             }
         }
+        stage('Install') {
+            steps {
+                sh 'mvn install -DskipTests'
+            }
+        }
         stage('Test') {
             steps {
                 sh 'mvn test -Dmaven.test.failure.ignore=true'
             }
         }
-        stage('PMD') {
+        stage('Quality Checks') {
             steps {
-                sh 'mvn pmd:pmd'
-            }
-        }
-        stage('JaCoCo') {
-            steps {
-                sh 'mvn jacoco:report'
+                parallel {
+                    stage('PMD') {
+                        steps { sh 'mvn pmd:pmd' }
+                    }
+                    stage('JaCoCo') {
+                        steps { sh 'mvn jacoco:report' }
+                    }
+                }
             }
         }
         stage('Javadoc') {
@@ -46,8 +53,7 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: '**/target/site/**/*.*', fingerprint: true
-            archiveArtifacts artifacts: '**/target/**/*.jar', fingerprint: true
-            archiveArtifacts artifacts: '**/target/**/*.war', fingerprint: true
+            archiveArtifacts artifacts: '**/target/**/*.?ar', fingerprint: true
             junit '**/target/surefire-reports/*.xml'
         }
     }
