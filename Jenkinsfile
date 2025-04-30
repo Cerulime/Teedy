@@ -21,15 +21,8 @@ pipeline {
                 sh 'mvn test -Dmaven.test.failure.ignore=true'
             }
         }
-        stage('Quality Checks') {
-            parallel {
-                stage('PMD') {
-                    steps { sh 'mvn pmd:pmd' }
-                }
-                stage('JaCoCo') {
-                    steps { sh 'mvn jacoco:report' }
-                }
-            }
+        stage('PMD') {
+            steps { sh 'mvn pmd:pmd' }
         }
         stage('Javadoc') {
             steps {
