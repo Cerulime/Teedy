@@ -22,14 +22,12 @@ pipeline {
             }
         }
         stage('Quality Checks') {
-            steps {
-                parallel {
-                    stage('PMD') {
-                        steps { sh 'mvn pmd:pmd' }
-                    }
-                    stage('JaCoCo') {
-                        steps { sh 'mvn jacoco:report' }
-                    }
+            parallel {
+                stage('PMD') {
+                    steps { sh 'mvn pmd:pmd' }
+                }
+                stage('JaCoCo') {
+                    steps { sh 'mvn jacoco:report' }
                 }
             }
         }
