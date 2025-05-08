@@ -101,6 +101,29 @@ angular.module('docs').controller('SettingsConfig', function($scope, $rootScope,
 
   $scope.loadWebhooks();
 
+  // Fetch guest login requests (admin only)
+  $scope.guestLoginRequests = [];
+
+  $scope.loadLoginRequests = () => {
+    Restangular.one('user/login_requests').get().then(({ requests = [] }) => {
+      $scope.guestLoginRequests = requests;
+    });
+  };
+
+  // Initialize if admin
+  $scope.isAdmin && $scope.loadLoginRequests();
+
+  const updateRequestStatus = (req, status) => {
+    Restangular.one('user').post('login_request_approval', 
+      { id: req.id, status },
+      undefined,
+      { 'Content-Type': 'application/json;charset=utf-8' }
+    ).then($scope.loadLoginRequests);
+  };
+
+  $scope.appLoginRequest = req => updateRequestStatus(req, 'APPROVED');
+  $scope.rejLoginRequest = req => updateRequestStatus(req, 'REJECTED');
+
   // Add a webhook
   $scope.webhook = {
     event: 'DOCUMENT_CREATED'

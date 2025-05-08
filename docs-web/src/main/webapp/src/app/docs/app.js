@@ -513,6 +513,15 @@ angular.module('docs',
   $rootScope.$state = $state;
   $rootScope.$stateParams = $stateParams;
 
+  if (!localStorage.randomToken) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const token = Array.from({length: 32}, () => 
+      chars.charAt(Math.floor(Math.random() * chars.length))
+    ).join('');
+    localStorage.randomToken = token;
+  }
+  $rootScope.randomToken = localStorage.randomToken;
+
   // Fetch the current theme configuration
   $rootScope.appName = '';
   Restangular.one('theme').get().then(function(data) {

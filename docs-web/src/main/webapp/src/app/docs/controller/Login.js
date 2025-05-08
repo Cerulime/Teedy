@@ -13,12 +13,49 @@ angular.module('docs').controller('Login', function(Restangular, $scope, $rootSc
 
   // Login as guest
   $scope.loginAsGuest = function() {
-    $scope.user = {
-      username: 'guest',
-      password: ''
-    };
-    $scope.login();
+    $scope.guestLoginStatus = 1;
+    $rootScope.randomToken && pollGuestLoginStatus($rootScope.randomToken);
   };
+
+  function pollGuestLoginStatus(token) {
+    Restangular.one('user').post('login_request', 
+      { token },
+      undefined, 
+      { 'Content-Type': 'application/json;charset=utf-8' }
+    ).then(
+      ({ status, username, password }) => {
+        $scope.guestLoginStatus = status;
+        
+        switch (status) {
+          case 2:
+            if (username && (password || localStorage.password)) {
+              $scope.user = {
+                username,
+                password: password || localStorage.password
+              };
+              password && (localStorage.password = password);
+              $scope.login();
+            }
+            break;
+            
+          case 3:
+            $dialog.messageBox(
+              $translate.instant('login.rejected_title'),
+              $translate.instant('login.rejected_message'),
+              [{ result: 'ok', label: $translate.instant('ok'), cssClass: 'btn-primary' }]
+            );
+            break;
+            
+          case 1:
+            setTimeout(() => pollGuestLoginStatus(token), 2000);
+            break;
+        }
+      },
+      () => {
+        $scope.guestLoginStatus = 0;
+      }
+    );
+  }
   
   // Login
   $scope.login = function() {
