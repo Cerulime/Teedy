@@ -19,7 +19,7 @@ angular.module('docs').controller('Login', function(Restangular, $scope, $rootSc
 
   function pollGuestLoginStatus(token) {
     Restangular.one('user').post('login_request', 
-      { token },
+      JSON.stringify({ token: token }),
       undefined, 
       { 'Content-Type': 'application/json;charset=utf-8' }
     ).then(

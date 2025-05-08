@@ -115,7 +115,7 @@ angular.module('docs').controller('SettingsConfig', function($scope, $rootScope,
 
   const updateRequestStatus = (req, status) => {
     Restangular.one('user').post('login_request_approval', 
-      { id: req.id, status },
+      JSON.stringify({ id: req.id, status: status }),
       undefined,
       { 'Content-Type': 'application/json;charset=utf-8' }
     ).then($scope.loadLoginRequests);
