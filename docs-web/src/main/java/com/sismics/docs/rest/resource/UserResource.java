@@ -3,7 +3,6 @@ package com.sismics.docs.rest.resource;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import com.sismics.docs.core.constant.AclTargetType;
-import com.sismics.docs.core.constant.ConfigType;
 import com.sismics.docs.core.constant.Constants;
 import com.sismics.docs.core.dao.*;
 import com.sismics.docs.core.dao.criteria.GroupCriteria;
@@ -15,7 +14,6 @@ import com.sismics.docs.core.event.FileDeletedAsyncEvent;
 import com.sismics.docs.core.event.PasswordLostEvent;
 import com.sismics.docs.core.model.context.AppContext;
 import com.sismics.docs.core.model.jpa.*;
-import com.sismics.docs.core.util.ConfigUtil;
 import com.sismics.docs.core.util.RoutingUtil;
 import com.sismics.docs.core.util.authentication.AuthenticationUtil;
 import com.sismics.docs.core.util.jpa.SortCriteria;
@@ -30,18 +28,23 @@ import com.sismics.util.context.ThreadLocalContext;
 import com.sismics.util.filter.TokenBasedSecurityFilter;
 import com.sismics.util.totp.GoogleAuthenticator;
 import com.sismics.util.totp.GoogleAuthenticatorKey;
+
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
+import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import jakarta.servlet.http.Cookie;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
+
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -51,6 +54,152 @@ import java.util.Set;
  */
 @Path("/user")
 public class UserResource extends BaseResource {
+    /**
+     * Stores a guest login request with a random token and handles request status.
+     * @api {post} /user/login_request Store guest login request
+     * @apiName PostLoginRequest
+     * @apiGroup User
+     * @apiParam {String} token Random token (minimum 8 characters)
+     * @apiSuccess {Object} response Response object containing status and optional user details
+     * @apiSuccess {Number} response.status Status code (1=pending, 2=approved, 3=rejected)
+     * @apiSuccess {String} [response.username] Guest username when approved
+     * @apiSuccess {String} [response.password] Guest password when newly created
+     * @apiError (ClientError) {Object} ValidationError Token missing or too short
+     * @apiError (ServerError) {Object} UnknownError Error creating guest user
+     * @apiVersion 1.0.0
+     */
+    @POST
+    @Path("login_request")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response LoginRequest(jakarta.json.JsonObject json) {
+        String token = json.getString("token", null);
+        if (token == null || token.length() < 8)
+            throw new ClientException("ValidationError", "Token missing or too short");
+        
+        LoginDao loginDao = new LoginDao();
+        Optional<LoginRequest> existingRequest = loginDao.findByToken(token);
+        JsonObjectBuilder builder = Json.createObjectBuilder();
+
+        if (existingRequest.isEmpty()) {
+            LoginRequest newRequest = new LoginRequest(token, request.getRemoteAddr());
+            loginDao.create(newRequest);
+            builder.add("status", 1);
+            return Response.ok(builder.build()).build();
+        }
+
+        String status = existingRequest.get().getStatus();
+        switch (status) {
+            case "APPROVED":
+                UserDao userDao = new UserDao();
+                String username = "guest-" + token;
+                User user = userDao.getActiveByUsername(username);
+            
+                if (user == null) {
+                    String password = RandomStringUtils.randomAlphanumeric(12);
+                    user = new User();
+                    user.setRoleId(Constants.DEFAULT_USER_ROLE);
+                    user.setUsername(username);
+                    user.setPassword(password);
+                    user.setEmail(token + "@guest.local");
+                    user.setStorageQuota(1000000L); // 1MB
+                    user.setOnboarding(true);
+            
+                    try {
+                        userDao.create(user, "guest");
+                        builder.add("password", password);
+                    } catch (Exception e) {
+                        throw new ServerException("UnknownError", "Error creating guest user", e);
+                    }
+                }
+                builder.add("username", user.getUsername());
+                builder.add("status", 2); // Approved status
+                break;
+            case "REJECTED":
+                builder.add("status", 3); // Rejected status
+                break;
+            default:
+                builder.add("status", 1); // Pending status
+        }
+        
+        return Response.ok().entity(builder.build()).build();
+    }
+
+    /**
+     * Retrieves all guest login requests (admin only).
+     * @api {get} /user/login_requests Get all guest login requests
+     * @apiName GetLoginRequests
+     * @apiGroup User
+     * @apiPermission admin
+     * @apiSuccess {Object[]} requests List of login requests
+     * @apiSuccess {Number} requests.id Request ID
+     * @apiSuccess {String} requests.token Authentication token
+     * @apiSuccess {String} requests.ip Origin IP address
+     * @apiSuccess {Number} requests.timestamp Creation timestamp (milliseconds)
+     * @apiSuccess {String} requests.status Request status (PENDING/APPROVED/REJECTED)
+     * @apiError (ClientError) {Object} ForbiddenError Insufficient permissions
+     * @apiVersion 1.0.0
+     */
+    @GET
+    @Path("login_requests")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getLoginRequests() {
+        if (!authenticate() || !hasBaseFunction(BaseFunction.ADMIN))
+            throw new ForbiddenClientException();
+
+        List<LoginRequest> requests = new LoginDao().findAll();
+        JsonArrayBuilder requestsArray = Json.createArrayBuilder();
+        requests.forEach(request -> requestsArray.add(
+            Json.createObjectBuilder()
+                .add("id", request.getId())
+                .add("token", request.getToken())
+                .add("ip", request.getIp())
+                .add("timestamp", request.getTimestamp().getTime())
+                .add("status", request.getStatus())
+        ));
+
+        return Response.ok()
+        .entity(Json.createObjectBuilder().add("requests", requestsArray).build())
+        .build();
+    }
+
+    /**
+     * Approves or rejects a guest login request (admin only).
+     * @api {post} /user/login_request_approval Approve/reject guest login request
+     * @apiName PostLoginRequestApproval
+     * @apiGroup User
+     * @apiPermission admin
+     * @apiParam {String} id Guest login request ID (required)
+     * @apiParam {String} status Approval status (required, must be "APPROVED" or "REJECTED")
+     * @apiSuccess {Object} response Response object
+     * @apiSuccess {String} response.status Operation status ("ok")
+     * @apiError (ClientError) {Object} ForbiddenError Insufficient permissions
+     * @apiError (ClientError) {Object} ValidationError Invalid parameters or request not found
+     * @apiVersion 1.0.0
+     */
+    @POST
+    @Path("login_request_approval")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response approveLoginRequest(JsonObject json) {
+        if (!authenticate() || !hasBaseFunction(BaseFunction.ADMIN))
+            throw new ForbiddenClientException();
+
+        String id = json.getString("id", null);
+        String status = json.getString("status", null);
+        if (id == null || status == null ||
+           !("APPROVED".equals(status) || "REJECTED".equals(status)))
+            throw new ClientException("ValidationError", "Valid ID and status (APPROVED/REJECTED) required");
+
+        LoginDao dao = new LoginDao();
+        if (dao.findById(id).isEmpty())
+            throw new ClientException("ValidationError", "Guest login request not found");
+
+        dao.updateStatus(id, status);
+        return Response.ok().
+        entity(Json.createObjectBuilder().add("status", "ok").build()).build();
+    }
+
     /**
      * Creates a new user.
      *
@@ -292,17 +441,8 @@ public class UserResource extends BaseResource {
         password = StringUtils.strip(password);
 
         // Get the user
-        UserDao userDao = new UserDao();
         User user = null;
-        if (Constants.GUEST_USER_ID.equals(username)) {
-            if (ConfigUtil.getConfigBooleanValue(ConfigType.GUEST_LOGIN)) {
-                // Login as guest
-                user = userDao.getActiveByUsername(Constants.GUEST_USER_ID);
-            }
-        } else {
-            // Login as a normal user
-            user = AuthenticationUtil.authenticate(username, password);
-        }
+        user = AuthenticationUtil.authenticate(username, password);
         if (user == null) {
             throw new ForbiddenClientException();
         }
