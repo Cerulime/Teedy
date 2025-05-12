@@ -5,9 +5,18 @@ pipeline {
         DOCKER_IMAGE = 'cerulime/teedy'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
         KUBE_NAMESPACE = 'teedy'
+        KUBECONFIG_CREDENTIALS_ID = 'kubeconfig-file'
     }
 
     stages {
+        stage('Setup Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: KUBECONFIG_CREDENTIALS_ID, variable: 'KUBECONFIG')]) {
+                    sh 'mkdir -p $HOME/.kube'
+                    sh 'cp $KUBECONFIG $HOME/.kube/config'
+                }
+            }
+        }
         stage('Prepare Kubernetes Resources') {
             steps {
                 script {
