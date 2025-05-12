@@ -4,60 +4,50 @@ pipeline {
         DOCKER_HUB_CREDENTIALS = credentials('a80d8bfc-33ef-4152-a4ea-15237f18e593')
         DOCKER_IMAGE = 'cerulime/teedy'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
+        KUBE_NAMESPACE = 'teedy'
     }
 
     stages {
-        stage('Build') {
-            steps {
-                checkout scmGit(
-                    branches: [[name: '*/master']],
-                    extensions: [],
-                    userRemoteConfigs: [[url: 'https://github.com/Cerulime/Teedy.git']]
-                )
-                sh 'mvn -B -DskipTests clean package'
-            }
-        }
-
-        stage('Building image') {
+        stage('Prepare Kubernetes Resources') {
             steps {
                 script {
-                    docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
-                }
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                script {
-                    sh "echo ${DOCKER_HUB_CREDENTIALS_PSW} | docker login -u ${DOCKER_HUB_CREDENTIALS_USR} --password-stdin"
+                    sh "kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
                     
-                    docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push()
-                    
-                    sh 'docker logout'
+                    sh """
+                    kubectl create secret docker-registry regcred \
+                        --docker-server=https://index.docker.io/v1/ \
+                        --docker-username=${DOCKER_HUB_CREDENTIALS_USR} \
+                        --docker-password=${DOCKER_HUB_CREDENTIALS_PSW} \
+                        --namespace=${KUBE_NAMESPACE} \
+                        --dry-run=client -o yaml | kubectl apply -f -
+                    """
                 }
             }
         }
+        stage('Deploy Application') {
+            steps {
+                sh "kubectl apply -f teedy-deployment.yaml"
 
-        stage('Run containers') {
+                sh "kubectl wait --for=condition=ready pod -l app=teedy -n ${KUBE_NAMESPACE} --timeout=120s"
+            }
+        }
+        stage('Port Forwarding') {
             steps {
                 script {
-                    sh 'docker stop teedy-container-8081 || true'
-                    sh 'docker rm teedy-container-8081 || true'
-
-                    docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").run(
-                        '--name teedy-container-8081 -d -p 8081:8080'
-                    )
-
-                    sh 'docker stop teedy-container-8082 || true'
-                    sh 'docker rm teedy-container-8082 || true'
-
-                    docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").run(
-                        '--name teedy-container-8082 -d -p 8082:8080'
-                    )
-
-                    sh 'docker ps --filter "name=teedy-container"'
+                    def pods = sh(script: "kubectl get pods -n ${KUBE_NAMESPACE} -l app=teedy -o jsonpath='{.items[*].metadata.name}'", returnStdout: true).trim().split()
+                    
+                    pods.eachWithIndex { pod, index ->
+                        def localPort = 8081 + index
+                        sh "kubectl port-forward -n ${KUBE_NAMESPACE} pod/${pod} ${localPort}:8080 &"
+                        echo "Pod ${pod} 的8080端口已映射到本地${localPort}端口"
+                    }
                 }
             }
+        }
+    }
+    post {
+        always {
+            sh 'pkill -f "kubectl port-forward" || true'
         }
     }
 }

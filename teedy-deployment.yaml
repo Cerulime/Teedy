@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teedy
+  namespace: teedy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: teedy
+  template:
+    metadata:
+      labels:
+        app: teedy
+    spec:
+      containers:
+      - name: teedy
+        image: cerulime/teedy:latest
+        ports:
+        - containerPort: 8080
+      imagePullSecrets:
+      - name: regcred
