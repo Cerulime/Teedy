@@ -21,7 +21,7 @@ pipeline {
             steps {
                 script {
                     sh "kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
-                    
+
                     sh """
                     kubectl create secret docker-registry regcred \
                         --docker-server=https://index.docker.io/v1/ \
@@ -37,7 +37,7 @@ pipeline {
             steps {
                 sh "kubectl apply -f teedy-deployment.yaml"
 
-                sh "kubectl wait --for=condition=ready pod -l app=teedy -n ${KUBE_NAMESPACE} --timeout=120s"
+                sh "kubectl wait --for=condition=ready pod -l app=teedy -n ${KUBE_NAMESPACE} --timeout=30s"
             }
         }
         stage('Port Forwarding') {
@@ -57,6 +57,7 @@ pipeline {
     post {
         always {
             sh 'pkill -f "kubectl port-forward" || true'
+            sh 'kubectl delete deployment ${KUBE_NAMESPACE} -n ${KUBE_NAMESPACE} || true'
         }
     }
 }
