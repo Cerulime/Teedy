@@ -510,5 +510,52 @@
   "loading": "加载中...",
   "send": "发送",
   "enabled": "激活",
-  "disabled": "未激活"
+  "disabled": "未激活",
+  "activity": {
+    "title": "跟踪文档进度",
+    "activity_type": "活动类型",
+    "progress": "进度",
+    "planned_completion": "计划完成时间",
+    "save_progress": "保存进度",
+    "progress_saved": "进度已保存",
+    "document_review": "文档审核",
+    "document_edit": "文档编辑",
+    "document_approval": "文档审批",
+    "document_publishing": "文档发布"
+  },
+ "menu_user_activities": "用户活动",
+ "user_activities": {
+    "title": "用户活动仪表板",
+    "subtitle": "管理用户活动并通过甘特图查看进度",
+    "list_title": "用户活动列表",
+    "no_activities": "暂无活动",
+    "loading": "加载中",
+    "user": "用户",
+    "activity_type": "活动类型",
+    "entity": "关联对象",
+    "progress": "进度",
+    "planned_date": "计划日期",
+    "completed_date": "完成日期",
+    "created_date": "创建日期",
+    "actions": "操作",
+    "delete": "删除",
+    "confirm_delete": "确认删除此活动？",
+    "load_more": "加载更多",
+    "of": "的",
+    "status": {
+      "completed": "已完成",
+      "progressing": "进行中",
+      "nostart": "未开始"
+    },
+    "controls": "活动控制",
+    "gantt_view": "甘特图视图",
+    "list_view": "列表视图",
+    "filter_user": "按用户筛选",
+    "filter_type": "按类型筛选",
+    "all_users": "所有用户",
+    "all_types": "所有类型",
+    "apply_filters": "应用筛选",
+    "reset_filters": "重置筛选",
+    "gantt_chart": "甘特图"
+ }
 }

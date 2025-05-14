@@ -643,5 +643,52 @@
   "loading": "Loading...",
   "send": "Send",
   "enabled": "Enabled",
-  "disabled": "Disabled"
+  "disabled": "Disabled",
+  "activity": {
+      "title": "Track Document Progress",
+      "activity_type": "Activity Type",
+      "progress": "Progress",
+      "planned_completion": "Planned Completion",
+      "save_progress": "Save Progress",
+      "progress_saved": "Progress Saved",
+      "document_review": "Document Review",
+      "document_edit": "Document Edit",
+      "document_approval": "Document Approval",
+      "document_publishing": "Document Publishing"
+    },
+  "menu_user_activities": "User Activities",
+  "user_activities": {
+    "title": "User Activity Dashboard",
+    "subtitle": "Manage user activities and view progress in Gantt Chart",
+    "list_title": "User Activities",
+    "no_activities": "No Activities",
+    "loading": "Loading",
+    "user": "User",
+    "activity_type": "Activity Type",
+    "entity": "Entity",
+    "progress": "Progress",
+    "planned_date": "Planned Date",
+    "completed_date": "Completed Date",
+    "created_date": "Created Date",
+    "actions": "Actions",
+    "delete": "Delete",
+    "confirm_delete": "Are you sure to delete this activity?",
+    "load_more": "Load More",
+    "of": "of",
+    "status": {
+      "completed": "Completed",
+      "progressing": "Progressing",
+      "nostart": "No Start"
+    },
+    "controls": "Activity Controls",
+    "gantt_view": "Gantt View",
+    "list_view": "List View",
+    "filter_user": "Filter by User",
+    "filter_type": "Filter by Type",
+    "all_users": "All Users",
+    "all_types": "All Types",
+    "apply_filters": "Apply Filters",
+    "reset_filters": "Reset Filters",
+    "gantt_chart": "Gantt Chart"
+  }
 }
