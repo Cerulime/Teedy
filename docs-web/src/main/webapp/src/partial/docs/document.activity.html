@@ -9,10 +9,10 @@
     <form class="document-activity">
       <!-- Activity Type Selector -->
       <div class="form-group">
-        <label class="control-label col-sm-3" for="activityType">
+        <label class="control-label col-sm-2" for="activityType">
           {{ 'document.activity.activity_type' | translate }}
         </label>
-        <div class="col-sm-9">
+        <div class="col-sm-10">
           <select id="activityType" class="form-control" ng-model="activity.activity_type">
             <option value="document_review">{{ 'document.activity.document_review' | translate }}</option>
             <option value="document_edit">{{ 'document.activity.document_edit' | translate }}</option>
@@ -24,10 +24,10 @@
       
       <!-- Progress Section -->
       <div class="form-group">
-        <label class="control-label col-sm-3" for="progressRange">
+        <label class="control-label col-sm-2" for="progressRange">
           {{ 'document.activity.progress' | translate }}
         </label>
-        <div class="col-sm-9">
+        <div class="col-sm-10">
           <div class="progress">
             <div class="progress-bar {{ getProgressClass(activity.progress) }}" 
                  role="progressbar" 
@@ -52,17 +52,17 @@
       
       <!-- Planned Date -->
       <div class="form-group">
-        <label class="control-label col-sm-3" for="plannedDate">
+        <label class="control-label col-sm-2" for="plannedDate">
           {{ 'document.activity.planned_completion' | translate }}
         </label>
-        <div class="col-sm-9">
+        <div class="col-sm-10">
           <input id="plannedDate" type="date" class="form-control" ng-model="activity.planned_date">
         </div>
       </div>
       
       <!-- Save Button -->
       <div class="form-group">
-        <div class="col-sm-offset-3 col-sm-9">
+        <div class="col-sm-offset-2 col-sm-10">
           <div class="action-container">
             <button type="button" class="btn btn-primary" ng-click="saveActivity()">
               <span class="fas fa-save"></span> {{ 'document.activity.save_progress' | translate }}
