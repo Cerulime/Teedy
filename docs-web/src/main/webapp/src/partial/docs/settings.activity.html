@@ -62,7 +62,7 @@
         <p>{{ 'settings.user_activities.no_activities' | translate }}</p>
       </div>
       
-      <div class="gantt-chart" ng-if="!loadingActivities && ganttData.data.length > 0">
+      <div class="gantt-chart" role="region" aria-label="Gantt Chart" ng-if="!loadingActivities && ganttData.data.length > 0">
         <!-- Gantt Chart Header -->
         <div class="gantt-header">
           <div class="gantt-header-title">{{ 'settings.user_activities.user' | translate }}</div>
@@ -135,16 +135,13 @@
                 <span ng-if="!activity.entity_name && !activity.entity_id">-</span>
               </td>
               <td>
-                <div class="progress-container">
-                  <div class="progress-bar {{ getProgressClass(activity.progress) }}" 
-                       role="progressbar" 
-                       aria-valuenow="{{ activity.progress }}" 
-                       aria-valuemin="0" 
-                       aria-valuemax="100" 
-                       ng-style="{ 'width': activity.progress + '%' }">
+                <div class="progress-container" aria-label="Progress: {{ activity.progress }}%">
+                  <div class="progress-bar ..." role="progressbar" 
+                      aria-valuenow="{{ activity.progress }}" 
+                      aria-valuemin="0" 
+                      aria-valuemax="100">
                     {{ activity.progress }}%
                   </div>
-                  <span class="progress-label">{{ formatProgress(activity.progress) }}</span>
                 </div>
               </td>
               <td>{{ formatDate(activity.planned_date_timestamp) }}</td>

@@ -4,27 +4,40 @@
  * Settings activity controller.
  */
 angular.module('docs').controller('SettingsActivity', function($scope, $state, Restangular, $translate) {
-  // State initialization using object spread for clarity
-  $scope.state = {
-    loadingActivities: false,
-    activities: [],
-    total: 0,
-    offset: 0,
-    limit: 50,
-    showGantt: true,
-    filterUser: null,
-    filterType: null,
-    availableUsers: [],
-    availableTypes: [],
-    ganttData: {
-      data: [],
-      timeScale: {
-        from: new Date(),
-        to: new Date(),
-        width: '1000px'
-      }
+  // State variables
+  let loadingActivities = false;
+  let activities = [];
+  let total = 0;
+  let offset = 0;
+  const limit = 50;
+  let showGantt = true;
+  let filterUser = null;
+  let filterType = null;
+  let availableUsers = [];
+  let availableTypes = [];
+  let ganttData = {
+    data: [],
+    timeScale: {
+      from: new Date(),
+      to: new Date(),
+      width: '1000px'
     }
   };
+
+  // Expose state variables to $scope for template access
+  Object.defineProperties($scope, {
+    loadingActivities: { get: () => loadingActivities, set: (v) => loadingActivities = v },
+    activities: { get: () => activities, set: (v) => activities = v },
+    total: { get: () => total, set: (v) => total = v },
+    offset: { get: () => offset, set: (v) => offset = v },
+    limit: { get: () => limit },
+    showGantt: { get: () => showGantt, set: (v) => showGantt = v },
+    filterUser: { get: () => filterUser, set: (v) => filterUser = v },
+    filterType: { get: () => filterType, set: (v) => filterType = v },
+    availableUsers: { get: () => availableUsers, set: (v) => availableUsers = v },
+    availableTypes: { get: () => availableTypes, set: (v) => availableTypes = v },
+    ganttData: { get: () => ganttData, set: (v) => ganttData = v }
+  });
 
   // Helper functions
   const formatActivityType = (type) => {
@@ -75,37 +88,37 @@ angular.module('docs').controller('SettingsActivity', function($scope, $state, R
 
   // Controller methods
   $scope.toggleView = () => {
-    $scope.state.showGantt = !$scope.state.showGantt;
-    if ($scope.state.showGantt) {
+    $scope.showGantt = !$scope.showGantt;
+    if ($scope.showGantt) {
       prepareGanttData();
     }
   };
 
   $scope.loadActivities = () => {
-    $scope.state.loadingActivities = true;
+    loadingActivities = true;
     
     const params = {
-      offset: $scope.state.offset,
-      limit: $scope.state.limit,
+      offset: offset,
+      limit: limit,
       sort_column: 9,
       asc: false,
-      ...($scope.state.filterUser && { user_id: $scope.state.filterUser }),
-      ...($scope.state.filterType && { activity_type: $scope.state.filterType })
+      ...(filterUser && { user_id: filterUser }),
+      ...(filterType && { activity_type: filterType })
     };
     
     Restangular.one('useractivity')
       .get(params)
-      .then(({ activities, total }) => {
-        $scope.state.activities = activities;
-        $scope.state.total = total;
-        $scope.state.loadingActivities = false;
+      .then(({ activities: loadedActivities, total: loadedTotal }) => {
+        activities = loadedActivities;
+        total = loadedTotal;
+        loadingActivities = false;
         
         extractFilters();
-        if ($scope.state.showGantt) prepareGanttData();
+        if (showGantt) prepareGanttData();
       })
       .catch(error => {
         console.error('Failed to load activities:', error);
-        $scope.state.loadingActivities = false;
+        loadingActivities = false;
       });
   };
 
@@ -113,13 +126,13 @@ angular.module('docs').controller('SettingsActivity', function($scope, $state, R
     const users = new Map();
     const types = new Set();
     
-    $scope.state.activities.forEach(activity => {
+    activities.forEach(activity => {
       users.set(activity.user_id, activity.username);
       types.add(activity.activity_type);
     });
     
-    $scope.state.availableUsers = Array.from(users, ([id, name]) => ({ id, name }));
-    $scope.state.availableTypes = Array.from(types, type => ({ 
+    availableUsers = Array.from(users, ([id, name]) => ({ id, name }));
+    availableTypes = Array.from(types, type => ({ 
       id: type, 
       name: formatActivityType(type) 
     }));
@@ -135,7 +148,7 @@ angular.module('docs').controller('SettingsActivity', function($scope, $state, R
     
     const userGroups = new Map();
     
-    $scope.state.activities.forEach(activity => {
+    activities.forEach(activity => {
       if (!userGroups.has(activity.username)) {
         userGroups.set(activity.username, []);
       }
@@ -191,7 +204,7 @@ angular.module('docs').controller('SettingsActivity', function($scope, $state, R
       });
     });
     
-    $scope.state.ganttData = {
+    ganttData = {
       data: ganttRows,
       timeScale: { from: minDate, to: maxDate }
     };
@@ -246,19 +259,19 @@ angular.module('docs').controller('SettingsActivity', function($scope, $state, R
   };
   
   $scope.applyFilters = () => {
-    $scope.state.offset = 0;
+    offset = 0;
     $scope.loadActivities();
   };
 
   $scope.resetFilters = () => {
-    $scope.state.filterUser = null;
-    $scope.state.filterType = null;
-    $scope.state.offset = 0;
+    filterUser = null;
+    filterType = null;
+    offset = 0;
     $scope.loadActivities();
   };
 
   $scope.loadMore = () => {
-    $scope.state.offset += $scope.state.limit;
+    offset += limit;
     $scope.loadActivities();
   };
 
@@ -294,10 +307,10 @@ angular.module('docs').controller('SettingsActivity', function($scope, $state, R
   $scope.deleteActivity = (activity) => {
     if (confirm($translate.instant('settings.user_activities.confirm_delete'))) {
       Restangular.one('useractivity', activity.id).remove().then(() => {
-        $scope.state.activities = $scope.state.activities.filter(a => a.id !== activity.id);
-        $scope.state.total--;
+        activities = activities.filter(a => a.id !== activity.id);
+        total--;
         
-        if ($scope.state.showGantt) prepareGanttData();
+        if (showGantt) prepareGanttData();
       });
     }
   };
