@@ -1,31 +1,22 @@
 'use strict';
 
-/**
- * Document activity controller.
- */
 angular.module('docs').controller('DocumentActivity', [
   '$scope', 
   '$stateParams', 
   'Restangular', 
   '$translate',
-  function($scope, $stateParams, Restangular, $translate) {
-    // Initialize activity model
+  '$q',
+  function($scope, $stateParams, Restangular, $translate, $q) {
     $scope.activity = {
       progress: 0,
       activity_type: 'document_review'
     };
     
-    /**
-     * Parse timestamp to date string
-     * @param {string|number} timestamp 
-     * @returns {string|null} ISO date string or null if invalid
-     */
     const parseTimestamp = (timestamp) => {
       try {
         const date = new Date(typeof timestamp === 'string' 
           ? parseInt(timestamp, 10) 
           : timestamp);
-        
         return !isNaN(date.getTime()) 
           ? date.toISOString().substring(0, 10) 
           : null;
@@ -35,83 +26,73 @@ angular.module('docs').controller('DocumentActivity', [
       }
     };
     
-    // Load existing activity for this document
-    $scope.loadActivity = async () => {
-      try {
-        const { activities = [] } = await Restangular.one('useractivity/user')
-          .get({
-            entity_id: $stateParams.id,
-            limit: 1
-          });
-        
-        if (activities.length > 0) {
-          const [activity] = activities;
-          $scope.activity = {
-            ...$scope.activity,
-            id: activity.id,
-            progress: activity.progress,
-            activity_type: activity.activity_type,
-            planned_date: activity.planned_date_timestamp 
-              ? parseTimestamp(activity.planned_date_timestamp)
-              : undefined
-          };
-        }
-      } catch (error) {
-        console.error("Failed to load activity:", error);
-      }
-    };
-    
-    // Save the activity
-    $scope.saveActivity = async () => {
-      try {
-        const activity = {
-          ...angular.copy($scope.activity),
+    $scope.loadActivity = function() {
+      return $q(function(resolve, reject) {
+        Restangular.one('useractivity/user').get({
           entity_id: $stateParams.id,
-          planned_date_timestamp: $scope.activity.planned_date
-            ? new Date($scope.activity.planned_date).getTime()
-            : undefined
-        };
-        
-        const { id } = await Restangular.one('useractivity').put(activity);
-        
-        $scope.$apply(() => {
-          $scope.activity.id = id;
-          $scope.activitySaved = true;
-          
-          setTimeout(() => {
-            $scope.$apply(() => {
-              $scope.activitySaved = false;
+          limit: 1
+        }).then(function(response) {
+          var data = response.plain ? response.plain() : response;
+          if (data.activities && data.activities.length > 0) {
+            var activity = data.activities[0];
+            angular.extend($scope.activity, {
+              id: activity.id,
+              progress: activity.progress,
+              activity_type: activity.activity_type,
+              planned_date: activity.planned_date_timestamp 
+                ? parseTimestamp(activity.planned_date_timestamp)
+                : undefined
             });
-          }, 2000);
-        });
-      } catch (error) {
-        console.error("Failed to save activity:", error);
+          }
+          resolve();
+        }, reject);
+      });
+    };
+    
+    $scope.saveActivity = function() {
+      var activity = angular.copy($scope.activity);
+      activity.entity_id = $stateParams.id;
+      
+      if (activity.planned_date) {
+        var plannedDate = new Date(activity.planned_date);
+        if (!isNaN(plannedDate.getTime())) {
+          activity.planned_date_timestamp = plannedDate.getTime();
+        }
+      }
+      
+      Restangular.one('useractivity').put(activity).then(function(response) {
+        var data = response.plain ? response.plain() : response;
+        $scope.activity.id = data.id;
+        $scope.activitySaved = true;
+        
+        setTimeout(function() {
+          $scope.$apply(function() {
+            $scope.activitySaved = false;
+          });
+        }, 2000);
+      });
+    };
+    
+    $scope.formatProgress = function(progress) {
+      if (progress === 100) {
+        return $translate.instant('settings.user_activities.status.completed');
+      } else if (progress > 0) {
+        return $translate.instant('settings.user_activities.status.progressing') + ' (' + progress + '%)';
+      } else {
+        return $translate.instant('settings.user_activities.status.nostart');
       }
     };
     
-    // Format the progress for display
-    $scope.formatProgress = (progress) => {
-      const key = progress === 100 
-        ? 'settings.user_activities.status.completed'
-        : progress > 0 
-          ? 'settings.user_activities.status.progressing'
-          : 'settings.user_activities.status.nostart';
-      
-      return progress > 0 && progress < 100
-        ? `${$translate.instant(key)} (${progress}%)`
-        : $translate.instant(key);
+    $scope.getProgressClass = function(progress) {
+      if (progress === 100) {
+        return 'progress-bar-success';
+      } else if (progress > 0) {
+        return 'progress-bar-warning';
+      } else {
+        return 'progress-bar-danger';
+      }
     };
     
-    // Get the progress bar class
-    $scope.getProgressClass = (progress) => {
-      return progress === 100 
-        ? 'progress-bar-success'
-        : progress > 0 
-          ? 'progress-bar-warning'
-          : 'progress-bar-danger';
-    };
-    
-    // Initialize by loading existing activity
     $scope.loadActivity();
   }
 ]);
