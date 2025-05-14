@@ -1,0 +1,172 @@
+<section class="user-activities">
+  <!-- Header Section -->
+  <header class="user-activities-header">
+    <h2>{{ 'settings.user_activities.title' | translate }}</h2>
+    <p class="subtitle">{{ 'settings.user_activities.subtitle' | translate }}</p>
+  </header>
+
+  <!-- Controls Section -->
+  <section class="controls-section">
+    <div class="controls-header">
+      <h3>{{ 'settings.user_activities.controls' | translate }}</h3>
+      <div class="view-toggle">
+        <button type="button" class="toggle-btn" ng-class="{'active': showGantt}" ng-click="toggleView()">
+          <span class="icon fas fa-tasks"></span> {{ 'settings.user_activities.gantt_view' | translate }}
+        </button>
+        <button type="button" class="toggle-btn" ng-class="{'active': !showGantt}" ng-click="toggleView()">
+          <span class="icon fas fa-list"></span> {{ 'settings.user_activities.list_view' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <div class="filters-container">
+      <div class="filter-group">
+        <label for="userFilter">{{ 'settings.user_activities.filter_user' | translate }}</label>
+        <select id="userFilter" class="form-select" ng-model="filterUser">
+          <option value="">{{ 'settings.user_activities.all_users' | translate }}</option>
+          <option ng-repeat="user in availableUsers" value="{{ user.id }}">{{ user.name }}</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="typeFilter">{{ 'settings.user_activities.filter_type' | translate }}</label>
+        <select id="typeFilter" class="form-select" ng-model="filterType">
+          <option value="">{{ 'settings.user_activities.all_types' | translate }}</option>
+          <option ng-repeat="type in availableTypes" value="{{ type.id }}">{{ type.name }}</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button type="button" class="btn primary" ng-click="applyFilters()">
+          <span class="icon fas fa-filter"></span> {{ 'settings.user_activities.apply_filters' | translate }}
+        </button>
+        <button type="button" class="btn secondary" ng-click="resetFilters()">
+          <span class="icon fas fa-times"></span> {{ 'settings.user_activities.reset_filters' | translate }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gantt Chart Section -->
+  <section class="gantt-section" ng-if="showGantt">
+    <div class="section-header">
+      <h3>{{ 'settings.user_activities.gantt_chart' | translate }}</h3>
+    </div>
+
+    <div class="gantt-content">
+      <div class="loading-state" ng-if="loadingActivities">
+        <span class="spinner fas fa-spinner fa-spin"></span> {{ 'settings.user_activities.loading' | translate }}
+      </div>
+      
+      <div class="empty-state" ng-if="!loadingActivities && ganttData.data.length === 0">
+        <p>{{ 'settings.user_activities.no_activities' | translate }}</p>
+      </div>
+      
+      <div class="gantt-chart" ng-if="!loadingActivities && ganttData.data.length > 0">
+        <!-- Gantt Chart Header -->
+        <div class="gantt-header">
+          <div class="gantt-header-title">{{ 'settings.user_activities.user' | translate }}</div>
+          <div class="gantt-timeline">
+            <div class="timeline-scale">
+              <!-- Generate timeline dates -->
+              <div class="timeline-cell" ng-repeat="date in getTimelineDates(ganttData.timeScale.from, ganttData.timeScale.to)">
+                {{ date | date:'shortDate' }}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Gantt Chart Body -->
+        <div class="gantt-body">
+          <!-- For each user -->
+          <div class="gantt-row" ng-repeat="row in ganttData.data">
+            <div class="row-title">{{ row.name }}</div>
+            <div class="row-timeline">
+              <!-- Task bars -->
+              <div class="gantt-task" 
+                   ng-repeat="task in row.tasks" 
+                   ng-style="getTaskStyle(task, ganttData.timeScale)">
+                <div class="task-progress" ng-style="{'width': task.progress + '%', 'background-color': task.color}"></div>
+                <div class="task-content">{{ task.name }} ({{ task.progress }}%)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Activity List Section -->
+  <section class="list-section" ng-if="!showGantt">
+    <div class="section-header">
+      <h3>{{ 'settings.user_activities.list_title' | translate }}</h3>
+    </div>
+
+    <div class="list-content">
+      <div class="loading-state" ng-if="loadingActivities">
+        <span class="spinner fas fa-spinner fa-spin"></span> {{ 'settings.user_activities.loading' | translate }}
+      </div>
+      
+      <div class="empty-state" ng-if="!loadingActivities && activities.length === 0">
+        <p>{{ 'settings.user_activities.no_activities' | translate }}</p>
+      </div>
+      
+      <div class="activity-table-container" ng-if="!loadingActivities && activities.length > 0">
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>{{ 'settings.user_activities.user' | translate }}</th>
+              <th>{{ 'settings.user_activities.activity_type' | translate }}</th>
+              <th>{{ 'settings.user_activities.entity' | translate }}</th>
+              <th>{{ 'settings.user_activities.progress' | translate }}</th>
+              <th>{{ 'settings.user_activities.planned_date' | translate }}</th>
+              <th>{{ 'settings.user_activities.completed_date' | translate }}</th>
+              <th>{{ 'settings.user_activities.created_date' | translate }}</th>
+              <th>{{ 'settings.user_activities.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-repeat="activity in activities">
+              <td>{{ activity.username }}</td>
+              <td>{{ formatActivityType(activity.activity_type) }}</td>
+              <td>
+                <span ng-if="activity.entity_name">{{ activity.entity_name }}</span>
+                <span ng-if="!activity.entity_name && activity.entity_id" class="muted">{{ activity.entity_id }}</span>
+                <span ng-if="!activity.entity_name && !activity.entity_id">-</span>
+              </td>
+              <td>
+                <div class="progress-container">
+                  <div class="progress-bar {{ getProgressClass(activity.progress) }}" 
+                       role="progressbar" 
+                       aria-valuenow="{{ activity.progress }}" 
+                       aria-valuemin="0" 
+                       aria-valuemax="100" 
+                       ng-style="{ 'width': activity.progress + '%' }">
+                    {{ activity.progress }}%
+                  </div>
+                  <span class="progress-label">{{ formatProgress(activity.progress) }}</span>
+                </div>
+              </td>
+              <td>{{ formatDate(activity.planned_date_timestamp) }}</td>
+              <td>{{ formatDate(activity.completed_date_timestamp) }}</td>
+              <td>{{ formatDate(activity.create_timestamp) }}</td>
+              <td>
+                <button type="button" class="btn danger" ng-click="deleteActivity(activity)">
+                  <span class="icon fas fa-trash"></span> {{ 'settings.user_activities.delete' | translate }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        <div class="pagination" ng-if="total > activities.length">
+          <button class="btn secondary" ng-click="loadMore()">
+            <span class="icon fas fa-plus"></span> {{ 'settings.user_activities.load_more' | translate }}
+          </button>
+          <span class="pagination-info">{{ activities.length }} {{ 'settings.user_activities.of' | translate }} {{ total }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
